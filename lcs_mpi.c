@@ -243,9 +243,11 @@ int main(int argc, char ** argv) {
              MPI_Send(scoreMatrix[i], sizeA + 1, MPI_UNSIGNED_SHORT, 0, i, MPI_COMM_WORLD);
         }
     }
-    
+
+    double true_end_time = MPI_Wtime();
     // O processo root imprime o resultado
     if (rank == 0) {
+        printf("\nTotal computation time: %f seconds\n", true_end_time - start_time);
         printf("\nComputation time: %f seconds\n", end_time - start_time);
         printf("\nFinal Score: %d\n", scoreMatrix[sizeB][sizeA]);
         
