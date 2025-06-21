@@ -255,7 +255,7 @@ int main(int argc, char ** argv) {
                 }
             }
         }
-        freeScoreMatrix(tempMatrix, sizeB);
+        freeScoreMatrix(tempMatrix, sizeB);  
 
     } else {
         // Todos os outros processos enviam sua matriz inteira para o processo 0
