@@ -15,10 +15,10 @@ SERIAL_EXEC="./lcs_serial"
 MPI_EXEC="./lcs_mpi"
 
 # Defina os tamanhos de entrada para testar
-INPUT_SIZES=(1000 5000 10000) # Adicione ou altere os tamanhos aqui
+INPUT_SIZES=(10000 20000 30000 40000 50000) # Adicione ou altere os tamanhos aqui
 
 # Defina o número de processadores para o teste MPI
-MPI_PROCS=(1 3 6 12)
+MPI_PROCS=(1 2 4 8 10)
 
 # Defina o número de repetições para cada teste
 REPETITIONS=20
@@ -107,15 +107,15 @@ for tam in "${INPUT_SIZES[@]}"; do
             $GENERATOR_EXEC fileB.in "$tam" &>/dev/null
 
             # Executa o programa MPI e captura toda a saída
-            output=$(mpirun -np "$np" $MPI_EXEC)
+            output=$(mpirun -np "$np" --hostfile hostfile.txt $MPI_EXEC)
             
             # Extrai os tempos e armazena nos arrays
-            total_time=$(echo "$output" | grep 'tempo total:' | awk '{print $3}')
-            seq_time=$(echo "$output" | grep 'tempo sequencial:' | awk '{print $3}')
+            total_time=$(echo "$output" | grep 'Tempo total de score:' | awk '{print $4}')
+            tabel_time=$(echo "$output" | grep 'Tempo total de tabela:' | awk '{print $4}')
             
             mpi_total_times+=($total_time)
-            mpi_seq_times+=($seq_time)
-            echo "  - Repetição $i/$REPETITIONS: total=$total_time s, seq=$seq_time s"
+            mpi_tabel_times+=($tabel_time)
+            echo "  - Repetição $i/$REPETITIONS: total=$total_time s, tab=$tabel_time s"
         done
 
         # Calcula e salva estatísticas para o "tempo total"
@@ -124,9 +124,9 @@ for tam in "${INPUT_SIZES[@]}"; do
         echo ">>> Teste MPI (tempo total) para $np procs concluído. Média,DesvPad: $stats_total"
 
         # Calcula e salva estatísticas para o "tempo sequencial"
-        stats_seq=$(calculate_stats "${mpi_seq_times[@]}")
-        echo "mpi,$tam,$np,tempo_sequencial,$stats_seq" >> $RESULTS_FILE
-        echo ">>> Teste MPI (tempo seq) para $np procs concluído. Média,DesvPad: $stats_seq"
+        stats_tabel=$(calculate_stats "${mpi_tabel_times[@]}")
+        echo "mpi,$tam,$np,tempo_sequencial,$stats_tabel" >> $RESULTS_FILE
+        echo ">>> Teste MPI (tempo tab) para $np procs concluído. Média,DesvPad: $stats_tabel"
         echo ""
     done
 done

@@ -247,8 +247,8 @@ int main(int argc, char ** argv) {
     double true_end_time = MPI_Wtime();
     // O processo root imprime o resultado
     if (rank == 0) {
-        printf("\nTotal computation time: %f seconds\n", true_end_time - start_time);
-        printf("\nComputation time: %f seconds\n", end_time - start_time);
+        printf("\nTempo total de score: %f\n", end_time - start_time);
+        printf("\nTempo total de tabela: %f\n", true_end_time - start_time);
         printf("\nFinal Score: %d\n", scoreMatrix[sizeB][sizeA]);
         
         #ifdef DEBUGMATRIX
