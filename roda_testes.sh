@@ -83,7 +83,7 @@ for tam in "${INPUT_SIZES[@]}"; do
         $GENERATOR_EXEC fileB.in "$tam" &>/dev/null
         
         # Executa, extrai o tempo e armazena no array
-        time_val=$($SERIAL_EXEC | grep 'tempo total:' | awk '{print $3}')
+        time_val=$($SERIAL_EXEC | grep 'Tempo total:' | awk '{print $3}')
         serial_total_times+=($time_val)
         echo "  - Repetição $i/$REPETITIONS: $time_val s"
     done
@@ -100,7 +100,7 @@ for tam in "${INPUT_SIZES[@]}"; do
     for np in "${MPI_PROCS[@]}"; do
         echo ">>> Iniciando testes para lcs_mpi com tamanho $tam e $np processadores"
         declare -a mpi_total_times=()
-        declare -a mpi_seq_times=()
+        declare -a mpi_tabel_times=()
 
         for i in $(seq 1 $REPETITIONS); do
             $GENERATOR_EXEC fileA.in "$tam" &>/dev/null
@@ -110,8 +110,8 @@ for tam in "${INPUT_SIZES[@]}"; do
             output=$(mpirun -np "$np" --hostfile hostfile.txt $MPI_EXEC)
             
             # Extrai os tempos e armazena nos arrays
-            total_time=$(echo "$output" | grep 'Tempo total de score:' | awk '{print $4}')
-            tabel_time=$(echo "$output" | grep 'Tempo total de tabela:' | awk '{print $4}')
+            total_time=$(echo "$output" | grep 'Tempo total de score:' | awk '{print $5}')
+            tabel_time=$(echo "$output" | grep 'Tempo total de tabela:' | awk '{print $5}')
             
             mpi_total_times+=($total_time)
             mpi_tabel_times+=($tabel_time)

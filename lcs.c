@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <omp.h>
 
 #ifndef max
 #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
@@ -137,7 +138,7 @@ int main(int argc, char ** argv) {
 
 	// sizes of both sequences
 	int sizeA, sizeB;
-
+	double start_time = omp_get_wtime();
 	//read both sequences
 	seqA = read_seq("fileA.in");
 	seqB = read_seq("fileB.in");
@@ -161,8 +162,12 @@ int main(int argc, char ** argv) {
 	printMatrix(seqA, seqB, scoreMatrix, sizeA, sizeB);
 #endif
 
+	double end_time = omp_get_wtime();
+
+
 	//print score
 	printf("\nScore: %d\n", score);
+	printf("Tempo total: %f\n", end_time - start_time);
 
 	//free score matrix
 	freeScoreMatrix(scoreMatrix, sizeB);

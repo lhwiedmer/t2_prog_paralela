@@ -165,6 +165,8 @@ void printMatrix(char * seqA, char * seqB, mtype ** scoreMatrix, int sizeA, int 
 int main(int argc, char ** argv) {
     int rank, num_procs;
 
+    double start_time = MPI_Wtime();
+
     // Inicialização do MPI
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -203,7 +205,6 @@ int main(int argc, char ** argv) {
 
     // Barreira para sincronizar antes de começar o cálculo
     MPI_Barrier(MPI_COMM_WORLD);
-    double start_time = MPI_Wtime();
 
     // Executa a computação principal
     LCS_MPI(scoreMatrix, sizeA, sizeB, seqA, seqB, blockSize, rank, num_procs);
