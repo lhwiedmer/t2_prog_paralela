@@ -72,6 +72,9 @@ echo "Tipo,Tamanho,Processadores,Metrica,Media,DesvioPadrao" > $RESULTS_FILE
 # Loop principal sobre cada tamanho de entrada
 for tam in "${INPUT_SIZES[@]}"; do
 
+    $GENERATOR_EXEC fileA.in "$tam" &>/dev/null
+    $GENERATOR_EXEC fileB.in "$tam" &>/dev/null
+
     # -----------------------------------------------------
     # Teste Serial
     # -----------------------------------------------------
@@ -79,9 +82,7 @@ for tam in "${INPUT_SIZES[@]}"; do
     declare -a serial_total_times=() # Array para armazenar os tempos
 
     for i in $(seq 1 $REPETITIONS); do
-        $GENERATOR_EXEC fileA.in "$tam" &>/dev/null
-        $GENERATOR_EXEC fileB.in "$tam" &>/dev/null
-        
+
         # Executa, extrai o tempo e armazena no array
         time_val=$($SERIAL_EXEC | grep 'Tempo total:' | awk '{print $3}')
         serial_total_times+=($time_val)
@@ -103,8 +104,7 @@ for tam in "${INPUT_SIZES[@]}"; do
         declare -a mpi_tabel_times=()
 
         for i in $(seq 1 $REPETITIONS); do
-            $GENERATOR_EXEC fileA.in "$tam" &>/dev/null
-            $GENERATOR_EXEC fileB.in "$tam" &>/dev/null
+
 
             # Executa o programa MPI e captura toda a saída
             output=$(mpirun -np "$np" --map-by ppr:6:node $MPI_EXEC 256)
