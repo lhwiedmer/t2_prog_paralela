@@ -12,10 +12,10 @@ date
 # Defina os executáveis
 GENERATOR_EXEC="./writeRandomIn"
 SERIAL_EXEC="./lcs_serial"
-MPI_EXEC="./lcs_mpi"
+MPI_EXEC="./lcs_mpi_ndp"
 
 # Defina os tamanhos de entrada para testar
-INPUT_SIZES=(10000 20000 30000 40000 50000) # Adicione ou altere os tamanhos aqui
+INPUT_SIZES=(20000 30000 40000 50000 60000) # Adicione ou altere os tamanhos aqui
 
 # Defina o número de processadores para o teste MPI
 MPI_PROCS=(1 2 6 8 12)
@@ -107,15 +107,13 @@ for tam in "${INPUT_SIZES[@]}"; do
             $GENERATOR_EXEC fileB.in "$tam" &>/dev/null
 
             # Executa o programa MPI e captura toda a saída
-            output=$(mpirun -np "$np" $MPI_EXEC)
+            output=$(mpirun -np "$np" --map-by ppr:6:node $MPI_EXEC 256)
             
             # Extrai os tempos e armazena nos arrays
             total_time=$(echo "$output" | grep 'Tempo total de score:' | awk '{print $5}')
-            tabel_time=$(echo "$output" | grep 'Tempo total de tabela:' | awk '{print $5}')
             
             mpi_total_times+=($total_time)
-            mpi_tabel_times+=($tabel_time)
-            echo "  - Repetição $i/$REPETITIONS: total=$total_time s, tab=$tabel_time s"
+            echo "  - Repetição $i/$REPETITIONS: total=$total_time s"
         done
 
         # Calcula e salva estatísticas para o "tempo total"
@@ -123,11 +121,6 @@ for tam in "${INPUT_SIZES[@]}"; do
         echo "mpi,$tam,$np,tempo_total,$stats_total" >> $RESULTS_FILE
         echo ">>> Teste MPI (tempo total) para $np procs concluído. Média,DesvPad: $stats_total"
 
-        # Calcula e salva estatísticas para o "tempo sequencial"
-        stats_tabel=$(calculate_stats "${mpi_tabel_times[@]}")
-        echo "mpi,$tam,$np,tempo_sequencial,$stats_tabel" >> $RESULTS_FILE
-        echo ">>> Teste MPI (tempo tab) para $np procs concluído. Média,DesvPad: $stats_tabel"
-        echo ""
     done
 done
 

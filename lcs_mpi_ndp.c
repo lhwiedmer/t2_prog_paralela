@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <mpi.h> // Inclusão da biblioteca MPI
+#include <mpi.h>
 
 #ifndef max
 #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
@@ -9,9 +9,18 @@
 
 typedef unsigned short mtype;
 
-// As funções read_seq, allocateScoreMatrix, initScoreMatrix, freeScoreMatrix
-// e processaBloco permanecem exatamente as mesmas.
-#pragma region Funções Utilitárias (sem alterações)
+// Estrutura e funções utilitárias permanecem as mesmas
+#pragma region Structs e Funções Utilitárias
+typedef struct {
+    mtype **data;
+    int *global_j_map;
+    int num_local_j_blocks;
+    int sizeA;
+    int sizeB;
+    int blockSize;
+    int rank;
+    int num_procs;
+} DistMatrix;
 
 char* read_seq(char *fname) {
     FILE *fseq = NULL;
@@ -40,84 +49,93 @@ char* read_seq(char *fname) {
     fclose(fseq);
     return seq;
 }
-
-mtype ** allocateScoreMatrix(int sizeA, int sizeB) {
-    int i;
-    mtype ** scoreMatrix = (mtype **) malloc((sizeB + 1) * sizeof(mtype *));
-    for (i = 0; i < (sizeB + 1); i++)
-        scoreMatrix[i] = (mtype *) malloc((sizeA + 1) * sizeof(mtype));
-    return scoreMatrix;
+DistMatrix* create_dist_matrix(int sizeA, int sizeB, int blockSize, int rank, int num_procs) {
+    DistMatrix* mat = (DistMatrix*)malloc(sizeof(DistMatrix));
+    mat->sizeA = sizeA; mat->sizeB = sizeB; mat->blockSize = blockSize; mat->rank = rank; mat->num_procs = num_procs;
+    int bj = (sizeA + blockSize - 1) / blockSize;
+    mat->num_local_j_blocks = 0;
+    for (int jb = 0; jb < bj; ++jb) if (jb % num_procs == rank) mat->num_local_j_blocks++;
+    mat->global_j_map = (int*)malloc(mat->num_local_j_blocks * sizeof(int));
+    int local_jb_idx = 0;
+    for (int jb = 0; jb < bj; ++jb) if (jb % num_procs == rank) mat->global_j_map[local_jb_idx++] = jb;
+    int local_width = mat->num_local_j_blocks * blockSize + 1;
+    mat->data = (mtype **)malloc((sizeB + 1) * sizeof(mtype *));
+    for (int i = 0; i < (sizeB + 1); i++) mat->data[i] = (mtype *)calloc(local_width, sizeof(mtype));
+    return mat;
 }
-
-void initScoreMatrix(mtype ** scoreMatrix, int sizeA, int sizeB) {
-    int i, j;
-    for (j = 0; j < (sizeA + 1); j++)
-        scoreMatrix[0][j] = 0;
-    for (i = 1; i < (sizeB + 1); i++)
-        scoreMatrix[i][0] = 0;
+void free_dist_matrix(DistMatrix *mat) {
+    for (int i = 0; i < (mat->sizeB + 1); i++) free(mat->data[i]);
+    free(mat->data); free(mat->global_j_map); free(mat);
 }
-
-void freeScoreMatrix(mtype **scoreMatrix, int sizeB) {
-    int i;
-    for (i = 0; i < (sizeB + 1); i++)
-        free(scoreMatrix[i]);
-    free(scoreMatrix);
+int get_local_j_block_idx(DistMatrix* mat, int global_jb) {
+    for (int i = 0; i < mat->num_local_j_blocks; ++i) if (mat->global_j_map[i] == global_jb) return i;
+    return -1;
 }
-
-void processaBloco(mtype** scoreMatrix, int sizeA, int sizeB, int i_block, int j_block, int blockSize, const char* seqA, const char* seqB) {
-    int i_start = 1 + i_block * blockSize;
-    int j_start = 1 + j_block * blockSize;
-    int i_end = (i_start + blockSize < sizeB + 1) ? i_start + blockSize : sizeB + 1;
-    int j_end = (j_start + blockSize < sizeA + 1) ? j_start + blockSize : sizeA + 1;
-
+void processa_bloco_local(DistMatrix* mat, int i_block, int local_j_block_idx, const char* seqA, const char* seqB) {
+    int global_j_block = mat->global_j_map[local_j_block_idx];
+    int i_start = 1 + i_block * mat->blockSize;
+    int j_start_global = 1 + global_j_block * mat->blockSize;
+    int j_start_local = 1 + local_j_block_idx * mat->blockSize;
+    int i_end = (i_start + mat->blockSize < mat->sizeB + 1) ? i_start + mat->blockSize : mat->sizeB + 1;
+    int j_end_local = j_start_local + mat->blockSize;
     for (int i = i_start; i < i_end; ++i) {
-        for (int j = j_start; j < j_end; ++j) {
-            if (seqB[i - 1] == seqA[j - 1]) {
-                scoreMatrix[i][j] = scoreMatrix[i - 1][j - 1] + 1;
+        for (int j_local = j_start_local; j_local < j_end_local; ++j_local) {
+            int j_global = j_start_global + (j_local - j_start_local);
+            if (j_global > mat->sizeA) continue;
+            if (seqB[i - 1] == seqA[j_global - 1]) {
+                mat->data[i][j_local] = mat->data[i - 1][j_local - 1] + 1;
             } else {
-                scoreMatrix[i][j] = max(scoreMatrix[i - 1][j], scoreMatrix[i][j - 1]);
+                mat->data[i][j_local] = max(mat->data[i - 1][j_local], mat->data[i][j_local - 1]);
             }
         }
     }
 }
-
 #pragma endregion
 
-// A função LCS_MPI permanece a mesma, pois o cálculo distribuído não muda.
-mtype LCS_MPI(mtype ** scoreMatrix, int sizeA, int sizeB, char * seqA, char *seqB, int blockSize, int rank, int num_procs) {
-    int bi = (sizeB + blockSize -1) / blockSize;
-    int bj = (sizeA + blockSize -1) / blockSize;
+// CORREÇÃO 1: Sincronização da tag MPI na função de cálculo
+void LCS_MPI_Optimized(DistMatrix* mat, const char* seqA, const char* seqB) {
+    int bi = (mat->sizeB + mat->blockSize - 1) / mat->blockSize;
+    int bj = (mat->sizeA + mat->blockSize - 1) / mat->blockSize;
 
-    mtype *col_buffer = (mtype*) malloc(blockSize * sizeof(mtype));
+    mtype *col_buffer = (mtype*)malloc(mat->blockSize * sizeof(mtype));
 
-    for (int d = 0; d < bi + bj; ++d) {
+    for (int d = 0; d < bi + bj - 1; ++d) {
         for (int i_block = 0; i_block <= d; ++i_block) {
             int j_block = d - i_block;
             if (i_block < bi && j_block < bj) {
-                if (j_block % num_procs == rank) {
+                if (j_block % mat->num_procs == mat->rank) {
+                    int local_j_block_idx = get_local_j_block_idx(mat, j_block);
+
                     if (j_block > 0) {
-                        int source_rank = (j_block - 1) % num_procs;
-                        MPI_Recv(col_buffer, blockSize, MPI_UNSIGNED_SHORT, source_rank, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        int source_rank = (j_block - 1 + mat->num_procs) % mat->num_procs;
+                        // O recebimento acontece na iteração 'd', e deve corresponder ao envio da iteração 'd-1'
+                        MPI_Recv(col_buffer, mat->blockSize, MPI_UNSIGNED_SHORT, source_rank, d, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                         
-                        int j_target_col = j_block * blockSize;
-                        int i_start = 1 + i_block * blockSize;
-                        for(int k=0; k<blockSize; k++) {
-                            if ((i_start + k) <= sizeB) {
-                                scoreMatrix[i_start + k][j_target_col] = col_buffer[k];
+                        int j_target_col_local = local_j_block_idx * mat->blockSize;
+                        int i_start = 1 + i_block * mat->blockSize;
+                        for(int k=0; k < mat->blockSize; k++) {
+                            if ((i_start + k) <= mat->sizeB) {
+                                mat->data[i_start + k][j_target_col_local] = col_buffer[k];
                             }
                         }
                     }
-                    processaBloco(scoreMatrix, sizeA, sizeB, i_block, j_block, blockSize, seqA, seqB);
+
+                    processa_bloco_local(mat, i_block, local_j_block_idx, seqA, seqB);
+                    
                     if (j_block < bj - 1) {
-                        int dest_rank = (j_block + 1) % num_procs;
-                        int j_source_col = (j_block + 1) * blockSize;
-                        int i_start = 1 + i_block * blockSize;
-                         for(int k=0; k<blockSize; k++) {
-                            if ((i_start + k) <= sizeB) {
-                                col_buffer[k] = scoreMatrix[i_start + k][j_source_col];
+                        int dest_rank = (j_block + 1) % mat->num_procs;
+                        int j_source_col_local = (local_j_block_idx + 1) * mat->blockSize;
+                        int i_start = 1 + i_block * mat->blockSize;
+                         for(int k=0; k<mat->blockSize; k++) {
+                            if ((i_start + k) <= mat->sizeB) {
+                                col_buffer[k] = mat->data[i_start + k][j_source_col_local];
+                            } else {
+                                col_buffer[k] = 0;
                             }
                         }
-                        MPI_Send(col_buffer, blockSize, MPI_UNSIGNED_SHORT, dest_rank, 0, MPI_COMM_WORLD);
+                        // O envio na iteração 'd' é para a iteração 'd+1' do processo vizinho
+                        // A tag deve ser a da iteração de recebimento, ou seja, 'd+1'.
+                        MPI_Send(col_buffer, mat->blockSize, MPI_UNSIGNED_SHORT, dest_rank, d + 1, MPI_COMM_WORLD);
                     }
                 }
             }
@@ -125,38 +143,27 @@ mtype LCS_MPI(mtype ** scoreMatrix, int sizeA, int sizeB, char * seqA, char *seq
     }
     
     free(col_buffer);
-    // Retorna o score local. O valor correto estará no processo que possui a última célula.
-    return scoreMatrix[sizeB][sizeA];
 }
 
 
 int main(int argc, char ** argv) {
     int rank, num_procs;
-
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_procs);
 
     char *seqA = NULL, *seqB = NULL;
-    int sizeA = 0, sizeB = 0;
-    int blockSize = 32;
+    int sizeA = 0, sizeB = 0, blockSize = 32;
 
     if (rank == 0) {
-        if (argc < 2) {
-            fprintf(stderr, "Usage: %s <block_size> [fileA] [fileB]\n", argv[0]);
-            MPI_Abort(MPI_COMM_WORLD, 1);
-        }
+        if (argc < 2) { fprintf(stderr, "Usage: %s <block_size> [fileA] [fileB]\n", argv[0]); MPI_Abort(MPI_COMM_WORLD, 1); }
         blockSize = atoi(argv[1]);
         char* fileA = (argc > 2) ? argv[2] : "fileA.in";
         char* fileB = (argc > 3) ? argv[3] : "fileB.in";
-
-        seqA = read_seq(fileA);
-        seqB = read_seq(fileB);
-        sizeA = strlen(seqA);
-        sizeB = strlen(seqB);
-        printf("Running with %d processes.\n", num_procs);
-        printf("Block size: %d\n", blockSize);
-        printf("SeqA: %d, SeqB: %d\n", sizeA, sizeB);
+        seqA = read_seq(fileA); seqB = read_seq(fileB);
+        sizeA = strlen(seqA); sizeB = strlen(seqB);
+        printf("Running with %d processes (Optimized Memory - CORRECTED).\n", num_procs);
+        printf("Block size: %d\n", blockSize); printf("SeqA: %d, SeqB: %d\n", sizeA, sizeB);
     }
     
     MPI_Bcast(&sizeA, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -170,50 +177,33 @@ int main(int argc, char ** argv) {
     MPI_Bcast(seqA, sizeA + 1, MPI_CHAR, 0, MPI_COMM_WORLD);
     MPI_Bcast(seqB, sizeB + 1, MPI_CHAR, 0, MPI_COMM_WORLD);
 
-    mtype ** scoreMatrix = allocateScoreMatrix(sizeA, sizeB);
-    initScoreMatrix(scoreMatrix, sizeA, sizeB);
+    DistMatrix* dist_matrix = create_dist_matrix(sizeA, sizeB, blockSize, rank, num_procs);
 
     MPI_Barrier(MPI_COMM_WORLD);
     double start_time = MPI_Wtime();
-
-    LCS_MPI(scoreMatrix, sizeA, sizeB, seqA, seqB, blockSize, rank, num_procs);
-    
+    LCS_MPI_Optimized(dist_matrix, seqA, seqB);
     MPI_Barrier(MPI_COMM_WORLD);
     double end_time = MPI_Wtime();
 
-    // === OBTENÇÃO APENAS DO SCORE FINAL (SEM MONTAR A MATRIZ) ===
     mtype final_score = 0;
+    int last_j_block_global = (sizeA > 0) ? (sizeA - 1) / blockSize : 0;
+    int owner_rank = last_j_block_global % num_procs;
 
-    // Calcula qual processo possui o resultado final.
-    // É o processo responsável pela última coluna de blocos.
-    int last_j_block = (sizeA > 0) ? (sizeA - 1) / blockSize : 0;
-    int owner_rank = last_j_block % num_procs;
-
+    if (rank == owner_rank) {
+        int last_j_block_local = get_local_j_block_idx(dist_matrix, last_j_block_global);
+        int j_offset = (sizeA - 1) % blockSize;
+        int last_j_local = last_j_block_local * blockSize + j_offset + 1;
+        final_score = dist_matrix->data[sizeB][last_j_local];
+        if (rank != 0) { MPI_Send(&final_score, 1, MPI_UNSIGNED_SHORT, 0, 99, MPI_COMM_WORLD); }
+    }
     if (rank == 0) {
-        if (owner_rank == 0) {
-            // Se o processo root (0) é o dono, ele já tem o score.
-            final_score = scoreMatrix[sizeB][sizeA];
-        } else {
-            // Senão, o processo root recebe o score do processo dono.
-            MPI_Recv(&final_score, 1, MPI_UNSIGNED_SHORT, owner_rank, 99, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        }
-        
-        printf("\nComputation time: %f seconds\n", end_time - start_time);
-        printf("\nFinal Score: %d\n", final_score);
-        
-    } else {
-        // Se este processo (não-root) for o dono do resultado, ele o envia para o root.
-        if (rank == owner_rank) {
-            mtype local_score = scoreMatrix[sizeB][sizeA];
-            MPI_Send(&local_score, 1, MPI_UNSIGNED_SHORT, 0, 99, MPI_COMM_WORLD);
-        }
+        if (owner_rank != 0) { MPI_Recv(&final_score, 1, MPI_UNSIGNED_SHORT, owner_rank, 99, MPI_COMM_WORLD, MPI_STATUS_IGNORE); }
+        printf("Tempo total de score%f\n", end_time - start_time);
+        printf("Final Score: %d\n", final_score);
     }
     
-    // Liberação de memória e finalização do MPI
-    free(seqA);
-    free(seqB);
-    freeScoreMatrix(scoreMatrix, sizeB);
+    free(seqA); free(seqB);
+    free_dist_matrix(dist_matrix);
     MPI_Finalize();
-
     return EXIT_SUCCESS;
 }

@@ -2,11 +2,9 @@
 
 #SBATCH --job-name=lcs_benchmark # Nome do job para identificação
 #SBATCH --nodes=2                      # Solicita exatamente 2 nós
-#SBATCH --ntasks-per-node=6            # Solicita exatamente 6 tarefas (núcleos) por nó
 #SBATCH --ntasks=12                    # Número total de tarefas (2 nós * 6 tarefas/nó)
 #SBATCH --output=lcs_benchmark_%j.out  # Arquivo de saída padrão
 #SBATCH --error=lcs_benchmark_%j.err   # Arquivo de erro padrão
-#SBATCH --time=22:00:00                # Tempo máximo de execução (ex: 22 horas). Ajuste conforme necessário.
 
 #==============================================================================
 # SCRIPT DE SUBMISSÃO SLURM
