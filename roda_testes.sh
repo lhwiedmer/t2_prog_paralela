@@ -18,7 +18,7 @@ MPI_EXEC="./lcs_mpi"
 INPUT_SIZES=(10000 20000 30000 40000 50000) # Adicione ou altere os tamanhos aqui
 
 # Defina o número de processadores para o teste MPI
-MPI_PROCS=(1 2 4 8 10)
+MPI_PROCS=(1 2 6 8 12)
 
 # Defina o número de repetições para cada teste
 REPETITIONS=20
@@ -107,7 +107,7 @@ for tam in "${INPUT_SIZES[@]}"; do
             $GENERATOR_EXEC fileB.in "$tam" &>/dev/null
 
             # Executa o programa MPI e captura toda a saída
-            output=$(mpirun -np "$np" --hostfile hostfile.txt $MPI_EXEC)
+            output=$(mpirun -np "$np" $MPI_EXEC)
             
             # Extrai os tempos e armazena nos arrays
             total_time=$(echo "$output" | grep 'Tempo total de score:' | awk '{print $5}')
