@@ -107,7 +107,7 @@ for tam in "${INPUT_SIZES[@]}"; do
 
 
             # Executa o programa MPI e captura toda a saída
-            output=$(mpirun -np "$np" --map-by ppr:6:node $MPI_EXEC 256)
+            output=$(mpirun -np "$np" --hostfile hostfile.txt $MPI_EXEC 256)
             
             # Extrai os tempos e armazena nos arrays
             total_time=$(echo "$output" | grep 'Tempo total de score:' | awk '{print $5}')
