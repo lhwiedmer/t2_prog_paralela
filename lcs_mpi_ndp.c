@@ -198,7 +198,7 @@ int main(int argc, char ** argv) {
     }
     if (rank == 0) {
         if (owner_rank != 0) { MPI_Recv(&final_score, 1, MPI_UNSIGNED_SHORT, owner_rank, 99, MPI_COMM_WORLD, MPI_STATUS_IGNORE); }
-        printf("Tempo total de score%f\n", end_time - start_time);
+        printf("Tempo total de score: %f\n", end_time - start_time);
         printf("Final Score: %d\n", final_score);
     }
     
