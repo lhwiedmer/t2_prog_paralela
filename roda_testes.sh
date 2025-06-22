@@ -15,10 +15,10 @@ SERIAL_EXEC="./lcs_serial"
 MPI_EXEC="./lcs_mpi_ndp"
 
 # Defina os tamanhos de entrada para testar
-INPUT_SIZES=(20000 30000 40000 50000 60000) # Adicione ou altere os tamanhos aqui
+INPUT_SIZES=(20000 40000 60000 80000 100000) # Adicione ou altere os tamanhos aqui
 
 # Defina o número de processadores para o teste MPI
-MPI_PROCS=(1 2 6 8 12)
+MPI_PROCS=(1 2 6 8 10)
 
 # Defina o número de repetições para cada teste
 REPETITIONS=20
