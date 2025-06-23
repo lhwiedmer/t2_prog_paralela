@@ -18,7 +18,7 @@ MPI_EXEC="./lcs_mpi_ndp"
 INPUT_SIZES=(20000 40000 60000 80000 100000) # Adicione ou altere os tamanhos aqui
 
 # Defina o número de processadores para o teste MPI
-MPI_PROCS=(1 2 6 8 10)
+MPI_PROCS=(1 2 4 6 8 10)
 
 # Defina o número de repetições para cada teste
 REPETITIONS=20
@@ -57,8 +57,11 @@ calculate_stats() {
     # Calcula o desvio padrão (da amostra, n-1)
     local std_dev=$(echo "scale=10; sqrt($sum_sq_diff / ($n - 1))" | bc -l)
 
+    mean=$(echo "$mean" | sed 's/^\./0./')
+    std_dev=$(echo "$std_dev" | sed 's/^\./0./')
+
     # Formata a saída para CSV
-    printf "%.6f,%.6f" "$mean" "$std_dev"
+    echo "${mean},${std_dev}"
 }
 
 # --- PREPARAÇÃO DO ARQUIVO DE RESULTADOS ---

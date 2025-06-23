@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <omp.h>
+#include <time.h>
 
 #ifndef max
 #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
@@ -133,12 +132,13 @@ void freeScoreMatrix(mtype **scoreMatrix, int sizeB) {
 }
 
 int main(int argc, char ** argv) {
+	struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
 	// sequence pointers for both sequences
 	char *seqA, *seqB;
 
 	// sizes of both sequences
 	int sizeA, sizeB;
-	double start_time = omp_get_wtime();
 	//read both sequences
 	seqA = read_seq("fileA.in");
 	seqB = read_seq("fileB.in");
@@ -162,15 +162,18 @@ int main(int argc, char ** argv) {
 	printMatrix(seqA, seqB, scoreMatrix, sizeA, sizeB);
 #endif
 
-	double end_time = omp_get_wtime();
 
 
 	//print score
 	printf("\nScore: %d\n", score);
-	printf("Tempo total: %f\n", end_time - start_time);
 
 	//free score matrix
 	freeScoreMatrix(scoreMatrix, sizeB);
+
+	clock_gettime(CLOCK_MONOTONIC, &end);
+	double elapsed = (end.tv_sec - start.tv_sec) + 
+                 (end.tv_nsec - start.tv_nsec) / 1e9;
+	printf("Tempo total: %f\n", elapsed);
 
 	return EXIT_SUCCESS;
 }

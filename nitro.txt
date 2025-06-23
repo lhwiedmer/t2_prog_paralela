@@ -1,0 +1,92 @@
+System:
+  Kernel: 6.8.0-62-generic arch: x86_64 bits: 64 compiler: gcc v: 13.3.0 clocksource: tsc
+  Desktop: Cinnamon v: 6.4.8 tk: GTK v: 3.24.41 wm: Muffin v: 6.4.1 vt: 7 dm: LightDM v: 1.30.0
+    Distro: Linux Mint 22.1 Xia base: Ubuntu 24.04 noble
+Machine:
+  Type: Laptop System: Acer product: Nitro AN517-52 v: V2.06 serial: <superuser required>
+  Mobo: CML model: Karoq_CMS v: V2.06 serial: <superuser required> part-nu: 0000000000000000
+    uuid: <superuser required> UEFI: Insyde v: 2.06 date: 08/20/2021
+Battery:
+  ID-1: BAT1 charge: 46.5 Wh (95.1%) condition: 48.9/57.5 Wh (85.1%) volts: 16.1 min: 15.4
+    model: LGC AP18E8M type: Li-ion serial: <filter> status: discharging
+CPU:
+  Info: quad core model: Intel Core i5-10300H bits: 64 type: MT MCP smt: enabled arch: Comet Lake
+    rev: 2 cache: L1: 256 KiB L2: 1024 KiB L3: 8 MiB
+  Speed (MHz): avg: 874 high: 900 min/max: 800/4500 cores: 1: 899 2: 900 3: 900 4: 900 5: 900
+    6: 800 7: 800 8: 900 bogomips: 39999
+  Flags: avx avx2 ht lm nx pae sse sse2 sse3 sse4_1 sse4_2 ssse3 vmx
+Graphics:
+  Device-1: Intel CometLake-H GT2 [UHD Graphics] vendor: Acer Incorporated ALI driver: i915
+    v: kernel arch: Gen-9.5 ports: active: eDP-1 empty: HDMI-A-1 bus-ID: 00:02.0 chip-ID: 8086:9bc4
+    class-ID: 0300
+  Device-2: NVIDIA TU117M [GeForce GTX 1650 Mobile / Max-Q] vendor: Acer Incorporated ALI
+    driver: nouveau v: kernel arch: Turing pcie: speed: 8 GT/s lanes: 8 ports: active: none
+    empty: HDMI-A-2 bus-ID: 01:00.0 chip-ID: 10de:1f9d class-ID: 0300 temp: 24.0 C
+  Device-3: Chicony HD User Facing driver: uvcvideo type: USB rev: 2.0 speed: 480 Mb/s lanes: 1
+    bus-ID: 1-5:2 chip-ID: 04f2:b64f class-ID: 0e02 serial: <filter>
+  Display: x11 server: X.Org v: 21.1.11 with: Xwayland v: 23.2.6 driver: X: loaded: modesetting
+    unloaded: fbdev,vesa dri: iris gpu: i915 display-ID: :0 screens: 1
+  Screen-1: 0 s-res: 1920x1080 s-dpi: 96 s-size: 508x285mm (20.00x11.22") s-diag: 582mm (22.93")
+  Monitor-1: eDP-1 model: AU Optronics 0x409d res: 1920x1080 hz: 144 dpi: 128
+    size: 382x215mm (15.04x8.46") diag: 438mm (17.3") modes: 1920x1080
+  API: EGL v: 1.5 hw: drv: intel iris drv: nvidia nouveau platforms: device: 0 drv: iris
+    device: 1 drv: nouveau device: 2 drv: swrast gbm: drv: iris surfaceless: drv: iris x11: drv: iris
+    inactive: wayland
+  API: OpenGL v: 4.6 compat-v: 4.3 vendor: intel mesa v: 24.2.8-1ubuntu1~24.04.1 glx-v: 1.4
+    direct-render: yes renderer: Mesa Intel UHD Graphics (CML GT2) device-ID: 8086:9bc4
+Audio:
+  Device-1: Intel Comet Lake PCH cAVS vendor: Acer Incorporated ALI driver: snd_hda_intel v: kernel
+    bus-ID: 00:1f.3 chip-ID: 8086:06c8 class-ID: 0403
+  Device-2: NVIDIA vendor: Acer Incorporated ALI driver: snd_hda_intel v: kernel pcie:
+    speed: 8 GT/s lanes: 8 bus-ID: 01:00.1 chip-ID: 10de:10fa class-ID: 0403
+  API: ALSA v: k6.8.0-62-generic status: kernel-api
+  Server-1: PipeWire v: 1.0.5 status: active with: 1: pipewire-pulse status: active
+    2: wireplumber status: active 3: pipewire-alsa type: plugin
+Network:
+  Device-1: Intel Comet Lake PCH CNVi WiFi driver: iwlwifi v: kernel bus-ID: 00:14.3
+    chip-ID: 8086:06f0 class-ID: 0280
+  IF: wlp0s20f3 state: up mac: <filter>
+  Device-2: Realtek Killer E2600 GbE vendor: Acer Incorporated ALI driver: r8169 v: kernel pcie:
+    speed: 2.5 GT/s lanes: 1 port: 3000 bus-ID: 07:00.0 chip-ID: 10ec:2600 class-ID: 0200
+  IF: enp7s0 state: down mac: <filter>
+Bluetooth:
+  Device-1: Intel AX201 Bluetooth driver: btusb v: 0.8 type: USB rev: 2.0 speed: 12 Mb/s lanes: 1
+    bus-ID: 1-14:3 chip-ID: 8087:0026 class-ID: e001
+  Report: hciconfig ID: hci0 rfk-id: 1 state: down bt-service: enabled,running rfk-block:
+    hardware: no software: yes address: <filter>
+Drives:
+  Local Storage: total: 476.94 GiB used: 12.05 GiB (2.5%)
+  ID-1: /dev/nvme0n1 vendor: Samsung model: MZVLQ512HBLU-00BTW size: 476.94 GiB speed: 31.6 Gb/s
+    lanes: 4 tech: SSD serial: <filter> fw-rev: FXM7201Q temp: 23.9 C scheme: GPT
+Partition:
+  ID-1: / size: 68.09 GiB used: 11.99 GiB (17.6%) fs: ext4 dev: /dev/nvme0n1p5
+  ID-2: /boot/efi size: 256 MiB used: 64.5 MiB (25.2%) fs: vfat dev: /dev/nvme0n1p1
+Swap:
+  ID-1: swap-1 type: file size: 2 GiB used: 0 KiB (0.0%) priority: -2 file: /swapfile
+USB:
+  Hub-1: 1-0:1 info: hi-speed hub with single TT ports: 16 rev: 2.0 speed: 480 Mb/s lanes: 1
+    chip-ID: 1d6b:0002 class-ID: 0900
+  Device-1: 1-5:2 info: Chicony HD User Facing type: video driver: uvcvideo interfaces: 2
+    rev: 2.0 speed: 480 Mb/s lanes: 1 power: 500mA chip-ID: 04f2:b64f class-ID: 0e02 serial: <filter>
+  Device-2: 1-14:3 info: Intel AX201 Bluetooth type: bluetooth driver: btusb interfaces: 2
+    rev: 2.0 speed: 12 Mb/s lanes: 1 power: 100mA chip-ID: 8087:0026 class-ID: e001
+  Hub-2: 2-0:1 info: super-speed hub ports: 8 rev: 3.1 speed: 10 Gb/s lanes: 1 chip-ID: 1d6b:0003
+    class-ID: 0900
+Sensors:
+  System Temperatures: cpu: 32.0 C pch: 35.0 C mobo: N/A gpu: nouveau temp: 24.0 C
+  Fan Speeds (rpm): N/A
+Repos:
+  Packages: pm: dpkg pkgs: 1993
+  No active apt repos in: /etc/apt/sources.list
+  Active apt repos in: /etc/apt/sources.list.d/official-package-repositories.list
+    1: deb http: //packages.linuxmint.com xia main upstream import backport
+    2: deb http: //archive.ubuntu.com/ubuntu noble main restricted universe multiverse
+    3: deb http: //archive.ubuntu.com/ubuntu noble-updates main restricted universe multiverse
+    4: deb http: //archive.ubuntu.com/ubuntu noble-backports main restricted universe multiverse
+    5: deb http: //security.ubuntu.com/ubuntu/ noble-security main restricted universe multiverse
+Info:
+  Memory: total: 16 GiB available: 15.45 GiB used: 1.3 GiB (8.4%)
+  Processes: 261 Power: uptime: 9m states: freeze,mem suspend: deep wakeups: 0
+    hibernate: disabled Init: systemd v: 255 target: graphical (5) default: graphical
+  Compilers: gcc: 13.3.0 Client: Cinnamon v: 6.4.8 inxi: 3.3.34
+

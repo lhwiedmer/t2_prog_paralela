@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <mpi.h>
+#include <time.h>
 
 #ifndef max
 #define max( a, b ) ( ((a) > (b)) ? (a) : (b) )
@@ -9,8 +10,6 @@
 
 typedef unsigned short mtype;
 
-// Estrutura e funções utilitárias permanecem as mesmas
-#pragma region Structs e Funções Utilitárias
 typedef struct {
     mtype **data;
     int *global_j_map;
@@ -49,28 +48,45 @@ char* read_seq(char *fname) {
     fclose(fseq);
     return seq;
 }
+
 DistMatrix* create_dist_matrix(int sizeA, int sizeB, int blockSize, int rank, int num_procs) {
     DistMatrix* mat = (DistMatrix*)malloc(sizeof(DistMatrix));
     mat->sizeA = sizeA; mat->sizeB = sizeB; mat->blockSize = blockSize; mat->rank = rank; mat->num_procs = num_procs;
     int bj = (sizeA + blockSize - 1) / blockSize;
     mat->num_local_j_blocks = 0;
-    for (int jb = 0; jb < bj; ++jb) if (jb % num_procs == rank) mat->num_local_j_blocks++;
+
+    for (int jb = 0; jb < bj; ++jb)
+        if (jb % num_procs == rank)
+            mat->num_local_j_blocks++;
+
     mat->global_j_map = (int*)malloc(mat->num_local_j_blocks * sizeof(int));
     int local_jb_idx = 0;
-    for (int jb = 0; jb < bj; ++jb) if (jb % num_procs == rank) mat->global_j_map[local_jb_idx++] = jb;
+    
+    for (int jb = 0; jb < bj; ++jb) 
+        if (jb % num_procs == rank)
+            mat->global_j_map[local_jb_idx++] = jb;
+    
     int local_width = mat->num_local_j_blocks * blockSize + 1;
     mat->data = (mtype **)malloc((sizeB + 1) * sizeof(mtype *));
-    for (int i = 0; i < (sizeB + 1); i++) mat->data[i] = (mtype *)calloc(local_width, sizeof(mtype));
+    
+    for (int i = 0; i < (sizeB + 1); i++)
+        mat->data[i] = (mtype *)calloc(local_width, sizeof(mtype));
     return mat;
 }
+
 void free_dist_matrix(DistMatrix *mat) {
     for (int i = 0; i < (mat->sizeB + 1); i++) free(mat->data[i]);
     free(mat->data); free(mat->global_j_map); free(mat);
 }
+
 int get_local_j_block_idx(DistMatrix* mat, int global_jb) {
-    for (int i = 0; i < mat->num_local_j_blocks; ++i) if (mat->global_j_map[i] == global_jb) return i;
+    for (int i = 0; i < mat->num_local_j_blocks; ++i)
+        if (mat->global_j_map[i] == global_jb) 
+            return i;
     return -1;
+
 }
+
 void processa_bloco_local(DistMatrix* mat, int i_block, int local_j_block_idx, const char* seqA, const char* seqB) {
     int global_j_block = mat->global_j_map[local_j_block_idx];
     int i_start = 1 + i_block * mat->blockSize;
@@ -90,27 +106,21 @@ void processa_bloco_local(DistMatrix* mat, int i_block, int local_j_block_idx, c
         }
     }
 }
-#pragma endregion
 
-// CORREÇÃO 1: Sincronização da tag MPI na função de cálculo
-void LCS_MPI_Optimized(DistMatrix* mat, const char* seqA, const char* seqB) {
+void LCS_MPI(DistMatrix* mat, const char* seqA, const char* seqB) {
     int bi = (mat->sizeB + mat->blockSize - 1) / mat->blockSize;
     int bj = (mat->sizeA + mat->blockSize - 1) / mat->blockSize;
-
     mtype *col_buffer = (mtype*)malloc(mat->blockSize * sizeof(mtype));
-
     for (int d = 0; d < bi + bj - 1; ++d) {
         for (int i_block = 0; i_block <= d; ++i_block) {
             int j_block = d - i_block;
             if (i_block < bi && j_block < bj) {
                 if (j_block % mat->num_procs == mat->rank) {
                     int local_j_block_idx = get_local_j_block_idx(mat, j_block);
-
                     if (j_block > 0) {
                         int source_rank = (j_block - 1 + mat->num_procs) % mat->num_procs;
-                        // O recebimento acontece na iteração 'd', e deve corresponder ao envio da iteração 'd-1'
                         MPI_Recv(col_buffer, mat->blockSize, MPI_UNSIGNED_SHORT, source_rank, d, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                        
+
                         int j_target_col_local = local_j_block_idx * mat->blockSize;
                         int i_start = 1 + i_block * mat->blockSize;
                         for(int k=0; k < mat->blockSize; k++) {
@@ -119,34 +129,31 @@ void LCS_MPI_Optimized(DistMatrix* mat, const char* seqA, const char* seqB) {
                             }
                         }
                     }
-
                     processa_bloco_local(mat, i_block, local_j_block_idx, seqA, seqB);
-                    
                     if (j_block < bj - 1) {
                         int dest_rank = (j_block + 1) % mat->num_procs;
                         int j_source_col_local = (local_j_block_idx + 1) * mat->blockSize;
                         int i_start = 1 + i_block * mat->blockSize;
-                         for(int k=0; k<mat->blockSize; k++) {
+                        for(int k=0; k<mat->blockSize; k++) {
                             if ((i_start + k) <= mat->sizeB) {
                                 col_buffer[k] = mat->data[i_start + k][j_source_col_local];
                             } else {
                                 col_buffer[k] = 0;
                             }
                         }
-                        // O envio na iteração 'd' é para a iteração 'd+1' do processo vizinho
-                        // A tag deve ser a da iteração de recebimento, ou seja, 'd+1'.
                         MPI_Send(col_buffer, mat->blockSize, MPI_UNSIGNED_SHORT, dest_rank, d + 1, MPI_COMM_WORLD);
                     }
                 }
             }
         }
     }
-    
     free(col_buffer);
 }
 
 
 int main(int argc, char ** argv) {
+    struct timespec start, end;
+	clock_gettime(CLOCK_MONOTONIC, &start);
     int rank, num_procs;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -180,10 +187,8 @@ int main(int argc, char ** argv) {
     DistMatrix* dist_matrix = create_dist_matrix(sizeA, sizeB, blockSize, rank, num_procs);
 
     MPI_Barrier(MPI_COMM_WORLD);
-    double start_time = MPI_Wtime();
-    LCS_MPI_Optimized(dist_matrix, seqA, seqB);
+    LCS_MPI(dist_matrix, seqA, seqB);
     MPI_Barrier(MPI_COMM_WORLD);
-    double end_time = MPI_Wtime();
 
     mtype final_score = 0;
     int last_j_block_global = (sizeA > 0) ? (sizeA - 1) / blockSize : 0;
@@ -198,12 +203,15 @@ int main(int argc, char ** argv) {
     }
     if (rank == 0) {
         if (owner_rank != 0) { MPI_Recv(&final_score, 1, MPI_UNSIGNED_SHORT, owner_rank, 99, MPI_COMM_WORLD, MPI_STATUS_IGNORE); }
-        printf("Tempo total de score: %f\n", end_time - start_time);
         printf("Final Score: %d\n", final_score);
     }
     
     free(seqA); free(seqB);
     free_dist_matrix(dist_matrix);
     MPI_Finalize();
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    double elapsed = (end.tv_sec - start.tv_sec) + 
+              (end.tv_nsec - start.tv_nsec) / 1e9;
+    printf("Tempo total de score: %f\n", elapsed);
     return EXIT_SUCCESS;
 }
