@@ -163,14 +163,12 @@ int main(int argc, char ** argv) {
     int sizeA = 0, sizeB = 0, blockSize = 32;
 
     if (rank == 0) {
-        if (argc < 2) { fprintf(stderr, "Usage: %s <block_size> [fileA] [fileB]\n", argv[0]); MPI_Abort(MPI_COMM_WORLD, 1); }
+        if (argc < 2) { fprintf(stderr, "Uso: %s <block_size> [fileA] [fileB]\n", argv[0]); MPI_Abort(MPI_COMM_WORLD, 1); }
         blockSize = atoi(argv[1]);
         char* fileA = (argc > 2) ? argv[2] : "fileA.in";
         char* fileB = (argc > 3) ? argv[3] : "fileB.in";
         seqA = read_seq(fileA); seqB = read_seq(fileB);
         sizeA = strlen(seqA); sizeB = strlen(seqB);
-        printf("Running with %d processes (Optimized Memory - CORRECTED).\n", num_procs);
-        printf("Block size: %d\n", blockSize); printf("SeqA: %d, SeqB: %d\n", sizeA, sizeB);
     }
     
     MPI_Bcast(&sizeA, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -210,8 +208,9 @@ int main(int argc, char ** argv) {
     free_dist_matrix(dist_matrix);
     MPI_Finalize();
     clock_gettime(CLOCK_MONOTONIC, &end);
-    double elapsed = (end.tv_sec - start.tv_sec) + 
-              (end.tv_nsec - start.tv_nsec) / 1e9;
-    printf("Tempo total de score: %f\n", elapsed);
+    if (rank == 0) {
+        double elapsed = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9;
+        printf("Tempo total de score: %f\n", elapsed);
+    }
     return EXIT_SUCCESS;
 }
